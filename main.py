@@ -19,10 +19,10 @@ def check_dice_rolls(combined_dices, number, count):
     actual_count = combined_dices.count(number)
 
     if actual_count >= count:
-        print(Fore.BLUE + f"There are at least {count} {number}'s on the table." + Style.RESET_ALL)
+        print(Fore.BLUE + f"He's not a LIAR - There are at least {count} {number}'s on the table." + Style.RESET_ALL)
         return 1
     else:
-        print(Fore.RED + f"There are not enough {number}'s on the table. Only {actual_count} found." + Style.RESET_ALL)
+        print(Fore.RED + f"LIAR - There are not enough {number}'s on the table. Only {actual_count} found." + Style.RESET_ALL)
     return 0
 
 
@@ -33,7 +33,6 @@ def play_game():
     print("Bids start ! bid ex. 4 2 - four 2s")
     players_dices = generate_dices(num_players, 5)
 
-    # makes the lists (for each player) into 1 combined
     combined_dices = [dice for player_dices in players_dices for dice in player_dices]
     players_bids = [[] for _ in range(num_players)]  # List of lists to store bids said by each player
 
@@ -50,7 +49,15 @@ def play_game():
         word = input(f"{current_player} says: ")
 
         if word.lower() == 'liar':
-            last_bid = players_bids[-1][-1]
+            if turn_count == 0 or not any(players_bids):
+                print("No previous bids to call liar on. Please make a bid.")
+                continue
+
+            for last_bid in reversed(players_bids):
+                if last_bid:
+                    last_bid = last_bid[-1]
+                    break
+
             print("\n" + current_player + " bidded " + last_bid)
             result = check_dice_rolls(combined_dices,last_bid[2], last_bid[0])
 
