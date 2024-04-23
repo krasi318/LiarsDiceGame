@@ -2,50 +2,73 @@ import random
 from colorama import Fore, Back, Style
 
 
-def generate_dices(num_players, dices):
+def generate_dices(num_players, num_dices):
     players_dices = []
-
-    for _ in range(num_players):
-        dice_rolls = [random.randint(1, 6) for _ in range(dices)]
+    for player_dices in num_dices:
+        dice_rolls = [random.randint(1, 6) for _ in range(player_dices)]
         players_dices.append(dice_rolls)
-
     return players_dices
 
 
-def check_dice_rolls(combined_dices, number, count):
+def check_dice_rolls(combined_dices, number, count, use_wildcards):
     number = int(number)
     count = int(count)
-
     actual_count = combined_dices.count(number)
+    ones_count = combined_dices.count(1) if use_wildcards and number != 1 else 0
+    actual_count += ones_count
 
     if actual_count >= count:
-        print(Fore.BLUE + f"He's not a LIAR - There are at least {count} {number}'s on the table." + Style.RESET_ALL)
-        return 1
+        print(Fore.BLUE + f"He's not a LIAR - There are at least {count} {number}'s on the table (including wildcards)." + Style.RESET_ALL)
+        return True
     else:
-        print(Fore.RED + f"LIAR - There are not enough {number}'s on the table. Only {actual_count} found." + Style.RESET_ALL)
-    return 0
+        print(Fore.RED + f"LIAR - There are not enough {number}'s on the table. Only {actual_count} found (including wildcards)." + Style.RESET_ALL)
+        return False
+
+def check_dice_rolls_wild(combined_dices, number, count):
+    number = int(number)
+    count = int(count)
+    actual_count = combined_dices.count(number)
+    ones_count = combined_dices.count(1)
+
+    if number != 1:
+        actual_count += ones_count
+
+    if actual_count >= count:
+        print(Fore.BLUE + f"He's not a LIAR - There are at least {count} {number}'s on the table (including wildcards)." + Style.RESET_ALL)
+        return True
+    else:
+        print(Fore.RED + f"LIAR - There are not enough {number}'s on the table. Only {actual_count} found (including wildcards)." + Style.RESET_ALL)
+        return False
 
 
-def play_game():
+def play_game(use_wildCards):
     print("Hello, welcome to the game!")
-    print("It's turn-based, and each player types in a bid 4 3, 2 2 (four 3's ...)")
+    print("It's turn-based, and each player types in a bid!")
     num_players = int(input("How many players will be playing? "))
-    print("Bids start ! bid ex. 4 2 - four 2s")
-    players_dices = generate_dices(num_players, 5)
+    num_dices = [5] * num_players
+    print("Bids start! Bid example: 4 2 - four 2s")
 
-    combined_dices = [dice for player_dices in players_dices for dice in player_dices]
-    players_bids = [[] for _ in range(num_players)]  # List of lists to store bids said by each player
+    players_bids = [[] for _ in range(num_players)]
 
     turn_count = 0
+    while sum(d > 0 for d in num_dices) > 1:
+        if turn_count % num_players == 0:
+            players_dices = generate_dices(num_players, num_dices)
+            combined_dices = [dice for player_dices in players_dices for dice in player_dices if player_dices]
 
-    while True:
-        current_player_index = turn_count % num_players  # raw data for which player it is (0,1,2)
-        current_player = f"Player {current_player_index + 1}"  # human-readable data it uses the player_index !
+        current_player_index = turn_count % num_players
+        if num_dices[current_player_index] == 0:
+            turn_count += 1
+            continue
+
+        current_player = f"Player {current_player_index + 1}"
+        print("\nCurrent player is:", current_player)
 
         print("\nDice rolls are:")
         print(players_dices[current_player_index])
         if turn_count != 0:
-            print("you can bid more or call them liar")
+            print("You can bid more or call them liar.")
+
         word = input(f"{current_player} says: ")
 
         if word.lower() == 'liar':
@@ -58,25 +81,28 @@ def play_game():
                     last_bid = last_bid[-1]
                     break
 
-            print("\n" + current_player + " bidded " + last_bid)
-            result = check_dice_rolls(combined_dices,last_bid[2], last_bid[0])
-
-            if result == 1:
+            last_count, last_number = map(int, last_bid.split())
+            result = check_dice_rolls(combined_dices, last_number, last_count, use_wildCards)
+            if result:
                 print(current_player + " is right!")
             else:
-                print(current_player + " lost :( ")
+                loser_index = (current_player_index - 1) % num_players
+                num_dices[loser_index] -= 1
+                print(f"Player {loser_index + 1} lost a dice and now has {num_dices[loser_index]} dice left.")
+                if num_dices[loser_index] == 0:
+                    print(f"Player {loser_index + 1} is out of the game!")
 
-            for i, words in enumerate(players_bids): # shows the bids of the players
-                print(f"\nPlayer {i + 1}'s bids: {words}")
-
-            print("\nDice rolls were:") # shows the dices of players
-            for i, dices in enumerate(players_dices):
-                print(Back.GREEN + f"Player {i + 1} rolled: {dices}")
-            break
+            players_bids = [[] for _ in range(num_players)]
         else:
             players_bids[current_player_index].append(word)
 
         turn_count += 1
 
+    print("Game over!")
+    for i, dice_count in enumerate(num_dices):
+        if dice_count > 0:
+            print(f"Player {i + 1} wins with {dice_count} dice left!")
 
-play_game()
+
+use_wildCards = int(input("Do you wanna play the wild version of Liars Dice? 1=yes,0=no "))
+play_game(use_wildCards)
